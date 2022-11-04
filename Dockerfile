@@ -1,7 +1,10 @@
+# # https://hub.docker.com/_/microsoft-dotnet-framework-sdk (see Full tag listing section)
+# FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc20194
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
 # SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
-SHELL ["powershell", "-Command"]
+# SHELL ["powershell", "-Command"]
+SHELL ["cmd", "-c"]
 
 # WORKDIR /actions-runner
 
@@ -32,6 +35,8 @@ SHELL ["powershell", "-Command"]
 
 COPY ./netfw/481/dotnet-framework-installer.exe .
 COPY ./netfw/481/patch.msu .
+COPY ./netfw/481/nuget.exe .
+COPY ./netfw/481/vs_TestAgent.exe .
 
 # SHELL ["/bin/bash", "-c"]
 # Install .Net Framework 4.8
@@ -62,7 +67,7 @@ RUN powershell Remove-Item -Force -Recurse ${Env:TEMP}\*
 # RUN rmdir /S /Q patch
 
 
-SHELL ["cmd", "-c"]
+# SHELL ["cmd", "-c"]
     # ngen .NET Fx
 # RUN %windir%\Microsoft.NET\Framework64\v4.0.30319\ngen uninstall "Microsoft.Tpm.Commands, Version=10.0.0.0, Culture=Neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=amd64"
 RUN %windir%\Microsoft.NET\Framework64\v4.0.30319\ngen install "Microsoft.PowerShell.Utility.Activities, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"
