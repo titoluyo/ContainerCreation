@@ -1,0 +1,159 @@
+FROM mcr.microsoft.com/windows/servercore:ltsc2019 as base
+
+ENV GITHUB_ORG ""
+ENV RUNNER_WORKDIR ""
+ENV RUNNER_NAME ""
+ENV RUNNER_LABELS ""
+ENV ADDIONAL_PACKAGES ""
+ENV APP_ID ""
+ENV PRIVATE_PEM ""
+ENV RUNNER_GROUP ""
+
+ENV AZP_URL ""
+ENV AZP_TOKEN ""
+ENV AZP_AGENT_NAME ""
+ENV AZP_POOL ""
+ENV AZP_WORK ""
+
+# SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+# SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
+SHELL ["powershell", "-Command"]
+
+WORKDIR /actions-runner
+
+# Install Chocolatey
+COPY install_choco.ps1 .
+RUN .\install_choco.ps1 -Wait; \
+    Remove-Item .\Install_Choco.ps1 -Force
+
+RUN choco install -y --no-progress \
+    nodejs-lts \
+    curl \
+    git \
+    gh \
+    jq \
+    azure-cli \
+    powershell-core \
+    az.powershell \
+    unzip \
+    python3 \
+    zip \
+    7zip \
+    vim \
+    nano \
+    sqlpackage \
+    sqlserver-cmdlineutils
+
+RUN Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force; \
+    Install-Module -Name Az -Scope AllUsers -Repository PSGallery -Force; \
+    Install-Module -Name AzTable -Scope AllUsers -Repository PSGallery -Force; \
+    Install-Module -Name Az.Storage -Scope AllUsers -Repository PSGallery -Force; \
+    Install-Module -Name Microsoft.Online.SharePoint.PowerShell -Scope AllUsers -Repository PSGallery -Force; \
+    Import-Module Microsoft.PowerShell.Security -Scope Global -Force;
+
+ADD https://raw.githubusercontent.com/microsoft/azure-devops-tls12/main/AzureDevOpsTls12Analysis.ps1 .
+
+COPY Mitigation-NetFramework.ps1 .
+RUN .\Mitigation-NetFramework.ps1 -Wait; \
+    Remove-Item .\Mitigation-NetFramework.ps1 -Force
+
+ENV \
+    # Enable detection of running in a container
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    COMPLUS_RUNNING_IN_CONTAINER=1 \
+    COMPLUS_NGenProtectedProcess_FeatureEnabled=0
+
+# RUN choco install dotnetfx --version=4.8.0 -y --ignore-package-exit-codes=3010
+
+# FROM baseImage
+# RUN choco install -y visualstudio2019buildtools --package-parameters \
+#     "--norestart --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
+
+# SHELL ["cmd", "-c"]
+
+# WORKDIR /install
+
+# ADD https://download.visualstudio.microsoft.com/download/pr/6f083c7e-bd40-44d4-9e3f-ffba71ec8b09/3951fd5af6098f2c7e8ff5c331a0679c/ndp481-x86-x64-allos-enu.exe dotnet-framework-installer-inet.exe
+# RUN dotnet-framework-installer-inet.exe
+
+# COPY ./netfw/481/dotnet-framework-installer.exe .
+# COPY ./netfw/481/patch.msu .
+# COPY ./netfw/481/nuget.exe .
+# COPY ./netfw/481/vs_TestAgent.exe .
+# COPY ./netfw/481/vs_BuildTools.exe .
+
+# ENV \
+#     # Enable detection of running in a container
+#     DOTNET_RUNNING_IN_CONTAINER=true \
+#     COMPLUS_RUNNING_IN_CONTAINER=1 \
+#     COMPLUS_NGenProtectedProcess_FeatureEnabled=0
+
+# # RUN choco install netfx-4.8.1-devpack -y
+# # RUN choco install netfx-4.8.1 -y; cat C:\ProgramData\chocolatey\logs\chocolatey.log
+# # RUN choco install netfx-4.8-devpack -y
+# # COPY ./netfw/481/dotnet-framework-installer.exe .
+# RUN .\dotnet-framework-installer.exe /q
+# RUN del .\dotnet-framework-installer.exe
+# RUN powershell Remove-Item -Force -Recurse ${Env:TEMP}\*
+
+# RUN %windir%\Microsoft.NET\Framework64\v4.0.30319\ngen install "Microsoft.PowerShell.Utility.Activities, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"
+# RUN %windir%\Microsoft.NET\Framework64\v4.0.30319\ngen update
+# RUN %windir%\Microsoft.NET\Framework\v4.0.30319\ngen update
+
+# ENV \
+#     # Do not generate certificate
+#     DOTNET_GENERATE_ASPNET_CERTIFICATE=false \
+#     # Enable correct mode for dotnet watch (only mode supported in a container)
+#     DOTNET_USE_POLLING_FILE_WATCHER=true \
+#     # NuGet version to install
+#     NUGET_VERSION=6.3.0 \
+#     # Install location of Roslyn
+#     ROSLYN_COMPILER_LOCATION="C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\Roslyn"
+
+# # Install NuGet CLI
+# RUN mkdir "%ProgramFiles%\NuGet\latest" \
+#     && curl -fSLo "%ProgramFiles%\NuGet\nuget.exe" https://dist.nuget.org/win-x86-commandline/v%NUGET_VERSION%/nuget.exe \
+#     && mklink "%ProgramFiles%\NuGet\latest\nuget.exe" "%ProgramFiles%\NuGet\nuget.exe"
+
+# # Install VS components
+# RUN \
+#     # Install VS Test Agent
+#     # curl -fSLo vs_TestAgent.exe https://aka.ms/vs/17/release/vs_TestAgent.exe \
+#     && start /w vs_TestAgent --quiet --norestart --nocache --wait --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\TestAgent" \
+#     && powershell -Command "if ($err = dir $Env:TEMP -Filter dd_setup_*_errors.log | where Length -gt 0 | Get-Content) { throw $err }" \
+#     && del vs_TestAgent.exe \
+#     \
+#     # Install VS Build Tools
+#     && curl -fSLo vs_BuildTools.exe https://aka.ms/vs/17/release/vs_BuildTools.exe \
+#     && start /w vs_BuildTools ^ \
+#         --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\BuildTools" ^ \
+#         --add Microsoft.Component.ClickOnce.MSBuild ^ \
+#         --add Microsoft.Net.Component.4.8.SDK ^ \
+#         --add Microsoft.NetCore.Component.Runtime.3.1 ^ \
+#         --add Microsoft.NetCore.Component.Runtime.6.0 ^ \
+#         --add Microsoft.NetCore.Component.SDK ^ \
+#         --add Microsoft.VisualStudio.Component.NuGet.BuildTools ^ \
+#         --add Microsoft.VisualStudio.Component.WebDeploy ^ \
+#         --add Microsoft.VisualStudio.Web.BuildTools.ComponentGroup ^ \
+#         --add Microsoft.VisualStudio.Workload.MSBuildTools ^ \
+#         --quiet --norestart --nocache --wait \
+#     && powershell -Command "if ($err = dir $Env:TEMP -Filter dd_setup_*_errors.log | where Length -gt 0 | Get-Content) { throw $err }" \
+#     && del vs_BuildTools.exe \
+#     \
+#     # Trigger dotnet first run experience by running arbitrary cmd
+#     && "%ProgramFiles%\dotnet\dotnet" help \
+#     \
+#     # Workaround for issues with 64-bit ngen
+#     && %windir%\Microsoft.NET\Framework64\v4.0.30319\ngen uninstall "%ProgramFiles(x86)%\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\SecAnnotate.exe" \
+#     && %windir%\Microsoft.NET\Framework64\v4.0.30319\ngen uninstall "%ProgramFiles(x86)%\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\WinMDExp.exe" \
+#     \
+#     # ngen assemblies queued by VS installers
+#     && %windir%\Microsoft.NET\Framework64\v4.0.30319\ngen update \
+#     && %windir%\Microsoft.NET\Framework\v4.0.30319\ngen update \
+#     \
+#     # Cleanup
+#     && (for /D %i in ("%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\*") do rmdir /S /Q "%i") \
+#     && (for %i in ("%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\*") do if not "%~nxi" == "vswhere.exe" del "%~i") \
+#     && powershell Remove-Item -Force -Recurse "%TEMP%\*" \
+#     && rmdir /S /Q "%ProgramData%\Package Cache"
+
