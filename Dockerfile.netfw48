@@ -15,9 +15,10 @@ ENV AZP_AGENT_NAME ""
 ENV AZP_POOL ""
 ENV AZP_WORK ""
 
+# SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'Continue'; $verbosePreference='Continue';"]
 # SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
-# SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
-SHELL ["powershell", "-Command"]
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
+# SHELL ["powershell", "-Command"]
 
 WORKDIR /actions-runner
 
@@ -57,11 +58,18 @@ COPY Mitigation-NetFramework.ps1 .
 RUN .\Mitigation-NetFramework.ps1 -Wait; \
     Remove-Item .\Mitigation-NetFramework.ps1 -Force
 
-ENV \
-    # Enable detection of running in a container
-    DOTNET_RUNNING_IN_CONTAINER=true \
-    COMPLUS_RUNNING_IN_CONTAINER=1 \
-    COMPLUS_NGenProtectedProcess_FeatureEnabled=0
+WORKDIR /azp
+
+COPY start.ps1 .
+
+# CMD [ "powershell", "-c", ".\start.ps1" ]
+ENTRYPOINT [ "powershell.exe", "-File", "start.ps1" ]
+
+# ENV \
+#     # Enable detection of running in a container
+#     DOTNET_RUNNING_IN_CONTAINER=true \
+#     COMPLUS_RUNNING_IN_CONTAINER=1 \
+#     COMPLUS_NGenProtectedProcess_FeatureEnabled=0
 
 # RUN choco install dotnetfx --version=4.8.0 -y --ignore-package-exit-codes=3010
 
