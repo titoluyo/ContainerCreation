@@ -1,12 +1,12 @@
 if (-not (Test-Path Env:AZP_URL)) {
-    Write-Host "error: missing AZP_URL environment variable"
+    Write-Error "error: missing AZP_URL environment variable"
     exit 1
 }
 
 if (-not (Test-Path Env:AZP_TOKEN_FILE)) {
     if (-not (Test-Path Env:AZP_TOKEN)) {
-        Write-Host "error: missing AZP_TOKEN environment variable"
-        exit 1    
+        Write-Error "error: missing AZP_TOKEN environment variable"
+        exit 1
     }
 
     $Env:AZP_TOKEN_FILE = "\azp\.token"
@@ -25,7 +25,7 @@ Write-Host "AZP_POOL: $Env:AZP_POOL"
 
 New-Item -ItemType Directory -Path "\azp\agent" | Out-Null
 
-# Let the agent ignore the token env variable
+# Let the agent ignore the token env variables
 $Env:VSO_AGENT_IGNORE = "AZP_TOKEN,AZP_TOKEN_FILE"
 
 Set-Location agent
@@ -34,19 +34,19 @@ Write-Host "2. Determining matching Azure Pipelines agent..." -ForegroundColor C
 
 $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(Get-Content ${Env:AZP_TOKEN_FILE})"))
 Write-Host $base64AuthInfo
-$package = Invoke-RestMethod -Headers @{Authorization=("Basic $base64AuthInfo")} -Uri "$(${Env:AZP_URL})/_apis/distributedtask/packages/agent?platform=win-x64&`$top=1" -Method Get
+$package = Invoke-RestMethod -Headers @{Authorization=("Basic $base64AuthInfo")} -Uri "$(${Env:AZP_URL})/_apis/distributedtask/packages/agent?platform=win-x64" -Method Get
 $packageUrl = $package.value[0].downloadUrl
 
 Write-Host $packageUrl
 
-Write-Host "3. Downloading and Installing Azure Pipelines agent..." -ForegroundColor Cyan
+Write-Host "3. Downloading and installing Azure Pipelines agent..." -ForegroundColor Cyan
 
 $wc = new-object System.Net.WebClient
 $agentPath = "$(Get-Location)\agent.zip"
 Write-Host $agentPath
 $wc.DownloadFile($packageUrl, "$(Get-Location)\agent.zip")
 
-Expand-Archive -Path "agent.zip" -DestinationPath "\azp\agent" # -Force
+Expand-Archive -Path "agent.zip" -DestinationPath "\azp\agent"
 
 try {
     Write-Host "4. Configuring Azure Pipelines agent..." -ForegroundColor Cyan
@@ -59,7 +59,7 @@ try {
         --pool "$(if (Test-Path Env:AZP_POOL) { ${Env:AZP_POOL} } else { 'Default' })" `
         --work "$(if (Test-Path Env:AZP_WORK) { ${Env:AZP_WORK} } else { '_work' })" `
         --replace
-    
+
     Write-Host "5. Running Azure Pipelines agent..." -ForegroundColor Cyan
 
     .\run.cmd
