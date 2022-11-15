@@ -33,7 +33,6 @@ Set-Location agent
 Write-Host "2. Determining matching Azure Pipelines agent..." -ForegroundColor Cyan
 
 $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$(Get-Content ${Env:AZP_TOKEN_FILE})"))
-Write-Host $base64AuthInfo
 $package = Invoke-RestMethod -Headers @{Authorization=("Basic $base64AuthInfo")} -Uri "$(${Env:AZP_URL})/_apis/distributedtask/packages/agent?platform=win-x64" -Method Get
 $packageUrl = $package.value[0].downloadUrl
 
@@ -41,9 +40,7 @@ Write-Host $packageUrl
 
 Write-Host "3. Downloading and installing Azure Pipelines agent..." -ForegroundColor Cyan
 
-$wc = new-object System.Net.WebClient
-$agentPath = "$(Get-Location)\agent.zip"
-Write-Host $agentPath
+$wc = New-Object System.Net.WebClient
 $wc.DownloadFile($packageUrl, "$(Get-Location)\agent.zip")
 
 Expand-Archive -Path "agent.zip" -DestinationPath "\azp\agent"
