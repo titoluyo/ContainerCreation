@@ -48,9 +48,13 @@ RUN choco install -y --no-progress \
 RUN Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force; \
     Install-Module -Name Az -Scope AllUsers -Repository PSGallery -Force; \
     Install-Module -Name AzTable -Scope AllUsers -Repository PSGallery -Force; \
-    Install-Module -Name Az.Storage -Scope AllUsers -Repository PSGallery -Force; \
+    Install-Module -Name PnP.PowerShell -Scope AllUsers -Force; \
+    Install-Module -Name Az.Advisor -Scope AllUsers -Force; \
     Install-Module -Name Microsoft.Online.SharePoint.PowerShell -Scope AllUsers -Repository PSGallery -Force; \
     Import-Module Microsoft.PowerShell.Security -Scope Global -Force;
+
+RUN Install-Module -Name AzureRM.profile -Scope AllUsers -AllowClobber -Force; \
+    Install-Module -Name Azure.Storage -Scope AllUsers -AllowClobber -Force;
 
 ADD https://raw.githubusercontent.com/microsoft/azure-devops-tls12/main/AzureDevOpsTls12Analysis.ps1 .
 
