@@ -1,10 +1,10 @@
 FROM mcr.microsoft.com/windows/servercore:ltsc2019 as base
 
 ENV GITHUB_ORG ""
-ENV RUNNER_WORKDIR ""
+ENV RUNNER_WORKDIR "_work"
 ENV RUNNER_NAME ""
 ENV RUNNER_LABELS ""
-ENV ADDIONAL_PACKAGES ""
+ENV ADDITIONAL_PACKAGES ""
 ENV APP_ID ""
 ENV PRIVATE_PEM ""
 ENV RUNNER_GROUP ""
@@ -23,9 +23,9 @@ SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop';"]
 WORKDIR /actions-runner
 
 # Install Chocolatey
-COPY install_choco.ps1 .
-RUN .\install_choco.ps1 -Wait; \
-    Remove-Item .\Install_Choco.ps1 -Force
+COPY Install-Choco.ps1 .
+RUN .\Install-Choco.ps1 -Wait; \
+    Remove-Item .\Install-Choco.ps1 -Force
 
 RUN choco install -y --no-progress \
     nodejs-lts \
